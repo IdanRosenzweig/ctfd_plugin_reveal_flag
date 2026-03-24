@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
   const revealed = new Map();
-
   let timeoutId = null;
 
   const renderFlag = (data) => {
@@ -20,13 +19,29 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(box);
       }
 
-      let html = `<strong>Current flag${data.flag_count > 1 ? `s (${data.flag_count})` : ''}:</strong><br>`;
+      const currentHTML = box.innerHTML;
+      let newHTML = `<strong>Current flag${data.flag_count > 1 ? `s (${data.flag_count})` : ''}:</strong><br>`;
 
       data.flags.forEach(flag => {
-        html += `<code class="flag p-1 rounded">${flag}</code><br>`;
+        newHTML += `<code class="flag p-1 rounded" style="cursor: pointer;" title="Click to copy">${flag}</code><br>`;
       });
 
-      box.innerHTML = html;
+      if (currentHTML !== newHTML) {
+        box.innerHTML = newHTML;
+
+        box.querySelectorAll('code.flag').forEach(code => {
+          code.addEventListener('click', () => {
+            const flagText = code.textContent;
+            navigator.clipboard.writeText(flagText).then(() => {
+              const originalText = code.textContent;
+              code.textContent = 'Copied!';
+              setTimeout(() => {
+                code.textContent = originalText;
+              }, 1500);
+            });
+          });
+        });
+      }
 
     } else if (box) {
       box.remove();
@@ -45,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    fetch(`/api/v1/reveal_flag/${chalId}`, { 
+    fetch(`/api/v1/reveal_flag/${chalId}`, {
       credentials: 'same-origin',
       cache: 'no-store'
     })
@@ -62,9 +77,9 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   };
 
-  const modalContainer = document.getElementById('challenge-modal') 
-                      || document.querySelector('.modal.fade') 
-                      || document.querySelector('.modal') 
+  const modalContainer = document.getElementById('challenge-modal')
+                      || document.querySelector('.modal.fade')
+                      || document.querySelector('.modal')
                       || document.body;
 
   const observer = new MutationObserver(() => {
@@ -78,13 +93,14 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         document.querySelector('#revealed-flag')?.remove();
       }
-    }, 80);
+    }, 100);
   });
 
-  observer.observe(modalContainer, { 
-    childList: true, 
+  observer.observe(modalContainer, {
+    childList: true,
     subtree: true,
     attributes: true,
     attributeFilter: ['class', 'style']
   });
+
 });
