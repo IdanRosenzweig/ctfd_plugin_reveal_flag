@@ -1,66 +1,90 @@
 document.addEventListener('DOMContentLoaded', () => {
+
   const revealed = new Map();
+
+  let timeoutId = null;
+
+  const renderFlag = (data) => {
+    let box = document.querySelector('#revealed-flag');
+
+    if (data.success && data.flags?.length > 0) {
+      if (!box) {
+        const container = document.querySelector('#challenge-input')?.parentElement
+                        || document.querySelector('.modal-content .form-group:last-child')
+                        || document.querySelector('.modal-body')
+                        || document.body;
+
+        box = document.createElement('div');
+        box.id = 'revealed-flag';
+        box.className = 'mt-3 text-center';
+        container.appendChild(box);
+      }
+
+      let html = `<strong>Current flag${data.flag_count > 1 ? `s (${data.flag_count})` : ''}:</strong><br>`;
+
+      data.flags.forEach(flag => {
+        html += `<code class="flag p-1 rounded">${flag}</code><br>`;
+      });
+
+      box.innerHTML = html;
+
+    } else if (box) {
+      box.remove();
+    }
+  };
 
   const updateFlagBox = () => {
     const input = document.querySelector('#challenge-id');
     if (!input) return;
 
-    const chalId = input.value;
+    const chalId = input.value.trim();
     if (!chalId) return;
 
-    const existing = document.querySelector('#revealed-flag');
-    if (existing) return; // already rendered
-
     if (revealed.has(chalId)) {
-      render(revealed.get(chalId), chalId);
+      renderFlag(revealed.get(chalId));
       return;
     }
 
-    const container = document.querySelector('#challenge-input')?.parentElement
-                    || document.querySelector('.modal-content .form-group:last-child')
-                    || document.body;
-
-    const box = document.createElement('div');
-    box.id = 'revealed-flag';
-    box.className = 'mt-3 text-center';
-    box.textContent = 'Loading...';
-    container.appendChild(box);
-
-    fetch(`/api/v1/reveal_flag/${chalId}`, { credentials: 'same-origin' })
-      .then(r => r.json())
+    fetch(`/api/v1/reveal_flag/${chalId}`, { 
+      credentials: 'same-origin',
+      cache: 'no-store'
+    })
+      .then(r => {
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
       .then(data => {
         revealed.set(chalId, data);
-        render(data, chalId);
+        renderFlag(data);
       })
       .catch(() => {
-        box.remove();
+        document.querySelector('#revealed-flag')?.remove();
       });
   };
 
-  const render = (data, id) => {
-    const box = document.querySelector('#revealed-flag');
-    if (!box) return;
-
-    if (data.success && data.flags?.length > 0) {
-      let html = '<strong>current flag';
-      if (data.flag_count > 1) html += `s (${data.flag_count})`;
-      html += ':</strong><br>';
-
-      data.flags.forEach(f => {
-        html += `<code class="flag">${f}</code><br>`;
-      });
-
-      box.innerHTML = html;
-    } else {
-      box.remove();
-    }
-  };
+  const modalContainer = document.getElementById('challenge-modal') 
+                      || document.querySelector('.modal.fade') 
+                      || document.querySelector('.modal') 
+                      || document.body;
 
   const observer = new MutationObserver(() => {
-    if (document.querySelector('#challenge-input, #challenge-submit')) {
-      updateFlagBox();
-    }
+    clearTimeout(timeoutId);
+
+    timeoutId = setTimeout(() => {
+      const isModalOpen = !!document.querySelector('#challenge-input, #challenge-submit');
+
+      if (isModalOpen) {
+        updateFlagBox();
+      } else {
+        document.querySelector('#revealed-flag')?.remove();
+      }
+    }, 80);
   });
 
-  observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(modalContainer, { 
+    childList: true, 
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class', 'style']
+  });
 });
