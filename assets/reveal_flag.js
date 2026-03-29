@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (data.success && data.flags?.length > 0) {
       if (!box) {
-        const container = document.querySelector('#challenge-input')?.parentElement
+        const container = document.querySelector('#challenge')?.parentElement
                         || document.querySelector('.modal-content .form-group:last-child')
                         || document.querySelector('.modal-body')
                         || document.body;
