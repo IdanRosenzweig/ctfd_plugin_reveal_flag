@@ -8,7 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (data.success && data.flags?.length > 0) {
       if (!box) {
-        const container = document.querySelector('#challenge');
+        // support both the core theme (#challenge) and the modern theme (.challenge-modal-body)
+        const container = document.querySelector('#challenge')
+                       || document.querySelector('.challenge-modal-body');
         if (!container) {
           return;
 	}
@@ -20,14 +22,30 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const currentHTML = box.innerHTML;
-      let newHTML = `<strong>Current flag${data.flag_count > 1 ? `s (${data.flag_count})` : ''}:</strong><br>`;
+      // Build the list with DOM APIs so flag contents are inserted as text and
+      // can't inject markup into the page
+      const fragment = document.createDocumentFragment();
+      const label = document.createElement('strong');
+      label.textContent = `Current flag${data.flags.length > 1 ? `s (${data.flags.length})` : ''}:`;
+      fragment.appendChild(label);
+      fragment.appendChild(document.createElement('br'));
 
       data.flags.forEach(flag => {
-        newHTML += `<code class="flag p-1 rounded" style="cursor: pointer;" title="Click to copy">${flag}</code><br>`;
+        const code = document.createElement('code');
+        code.className = 'flag p-1 rounded';
+        code.style.cursor = 'pointer';
+        code.title = 'Click to copy';
+        code.textContent = flag;
+        fragment.appendChild(code);
+        fragment.appendChild(document.createElement('br'));
       });
 
+      const scratch = document.createElement('div');
+      scratch.appendChild(fragment.cloneNode(true));
+      const newHTML = scratch.innerHTML;
+
       if (currentHTML !== newHTML) {
-        box.innerHTML = newHTML;
+        box.replaceChildren(fragment);
 
         box.querySelectorAll('code.flag').forEach(code => {
           code.addEventListener('click', () => {
